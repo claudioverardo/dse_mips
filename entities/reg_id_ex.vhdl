@@ -19,6 +19,7 @@ entity reg_id_ex is
             id_data_read1: 	in	std_logic_vector(31 downto 0);
             id_data_read2: 	in	std_logic_vector(31 downto 0);
             id_imm: 	    in	std_logic_vector(31 downto 0);
+            id_rs: 	        in	std_logic_vector(4 downto 0);
             id_rt: 	        in	std_logic_vector(4 downto 0);
             id_rd: 	        in	std_logic_vector(4 downto 0);
             -- CONTROL OUT
@@ -36,6 +37,7 @@ entity reg_id_ex is
             ex_data_read1: 	out	std_logic_vector(31 downto 0);
             ex_data_read2: 	out	std_logic_vector(31 downto 0);
             ex_imm: 	    out	std_logic_vector(31 downto 0);
+            ex_rs: 	        out	std_logic_vector(4 downto 0);
             ex_rt: 	        out	std_logic_vector(4 downto 0);
             ex_rd: 	        out	std_logic_vector(4 downto 0);
             -- OTHERS
@@ -148,6 +150,13 @@ begin
         generic map ( N => 32 )
         port map (  D => id_imm,
                     Q => ex_imm,
+                    clk => clk,
+                    rst => rst );
+
+    reg_rs: reg
+        generic map ( N => 5 )
+        port map (  D => id_rs,
+                    Q => ex_rs,
                     clk => clk,
                     rst => rst );
 

@@ -5,8 +5,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity shifter is
-    port (  shamt:      in  std_logic_vector (4 downto 0);
-            rt:         in  std_logic_vector (31 downto 0);
+    port (  shamt:      in  std_logic_vector (4 downto 0);  -- field in R-instructions
+            rt:         in  std_logic_vector (31 downto 0); -- data from temporary register
             ShiftCtrl:  in  std_logic_vector (1 downto 0);
             result:     out std_logic_vector (31 downto 0)  );
 end shifter;
@@ -20,6 +20,7 @@ begin
         
         case ShiftCtrl is
             
+            -- no operation
             when "00" | "11" => result <= rt;
 
             -- shift left l

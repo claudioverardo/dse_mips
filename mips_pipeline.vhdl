@@ -1,10 +1,23 @@
 -- MIPS PIPELINE
+--
+-- Pipelined RISC architecture with 5 stages:
+-- 1) Instruction Fetch (IF)
+-- 2) Instruction Decode (ID)
+-- 3) Execution (EX)
+-- 4) Memory Access (MEM)
+-- 5) Write-Back (WB)
+--
+-- Bit-parallelism: 32 bit
+-- Memory addressing: 32 bit
+-- Instruction Set: see "instruction_set.xlsx"
 
 library ieee;
 use ieee.std_logic_1164.all;
 
 entity mips_pipeline is
-    port (  clk: in  std_logic;
+    port (  -- clock signal
+            clk: in  std_logic;
+            -- reset signal (asynchronous)
             rst: in  std_logic );
 end mips_pipeline;
 
@@ -49,6 +62,7 @@ architecture behav of mips_pipeline is
                 id_data_read1: 	in	std_logic_vector(31 downto 0);
                 id_data_read2: 	in	std_logic_vector(31 downto 0);
                 id_imm: 	    in	std_logic_vector(31 downto 0);
+                id_rs: 	        in	std_logic_vector(4 downto 0);
                 id_rt: 	        in	std_logic_vector(4 downto 0);
                 id_rd: 	        in	std_logic_vector(4 downto 0);
                 -- CONTROL OUT
@@ -66,6 +80,7 @@ architecture behav of mips_pipeline is
                 ex_data_read1: 	out	std_logic_vector(31 downto 0);
                 ex_data_read2: 	out	std_logic_vector(31 downto 0);
                 ex_imm: 	    out	std_logic_vector(31 downto 0);
+                ex_rs: 	        out	std_logic_vector(4 downto 0);
                 ex_rt: 	        out	std_logic_vector(4 downto 0);
                 ex_rd: 	        out	std_logic_vector(4 downto 0);
                 -- OTHERS
@@ -93,7 +108,7 @@ architecture behav of mips_pipeline is
                 mem_MemWrite:       out  std_logic;
                 mem_MemToReg:       out  std_logic;
                 mem_RegWrite:       out  std_logic;
-                -- DATA IN 
+                -- DATA OUT
                 mem_branch_addr:    out  std_logic_vector(31 downto 0);
                 mem_branch_check:   out  std_logic;
                 mem_result:         out  std_logic_vector(31 downto 0);
@@ -240,33 +255,59 @@ architecture behav of mips_pipeline is
                 sel:        in  std_logic;
                 port_out:   out std_logic_vector (N-1 downto 0) );
     end component;
+
+    -- 3-MULTIPLEXER
+    component mux3
+        generic ( N : natural);
+        port (  port1:      in  std_logic_vector (N-1 downto 0);
+                port2:      in  std_logic_vector (N-1 downto 0);
+                port3:      in  std_logic_vector (N-1 downto 0);
+                sel:        in  std_logic_vector (1 downto 0);
+                port_out:   out std_logic_vector (N-1 downto 0) );
+    end component;
+
+    -- FORWARDING UNIT
+    component forwarding_unit
+        port(	-- ACTUAL SOURCES
+                rs:             in  std_logic_vector(4 downto 0);
+                rt:             in  std_logic_vector(4 downto 0);
+                RegDst:         in  std_logic;
+                -- FEEDBACK SOURCES
+                mem_rd:         in  std_logic_vector(4 downto 0);
+                mem_RegWrite:   in  std_logic;
+                wb_rd:          in  std_logic_vector(4 downto 0);
+                wb_RegWrite:    in  std_logic;
+                -- FORWARDING CONTROL
+                FwdSrc1:        out std_logic_vector(1 downto 0);
+                FwdSrc2:        out std_logic_vector(1 downto 0) ); 
+    end component;
     
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     --%%               SIGNALS               %%
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    -- SIGNALS IN FETCH STAGE
+    -- SIGNALS OF FETCH STAGE
     signal if_pc_link, if_pc_next_link_adder, if_pc_next_link_mux, if_instr_link: std_logic_vector(31 downto 0);
     
-    -- SIGNALS IN DECODE STAGE
+    -- SIGNALS OF DECODE STAGE
     signal id_OPCode_link: std_logic_vector(5 downto 0);
     signal id_ALUSrc_link, id_RegDst_link, id_BranchNE_link, id_Branch_link, id_MemRead_link, id_MemWrite_link, id_MemToReg_link, id_RegWrite_link: std_logic;
     signal id_ALUOp_link: std_logic_vector(3 downto 0);
     signal id_pc_link, id_instr_link, id_data_read1_link, id_data_read2_link, id_imm_link: std_logic_vector(31 downto 0);
 
-    -- SIGNALS IN EXECUTE STAGE
+    -- SIGNALS OF EXECUTE STAGE
     signal ex_ALUSrc_link, ex_RegDst_link, ex_BranchNE_link, ex_Branch_link, ex_MemRead_link, ex_MemWrite_link, ex_MemToReg_link, ex_RegWrite_link, ex_zero_link, ex_branch_check_link, ex_ResSrc_link: std_logic;
     signal ex_ALUOp_link, ex_ALUCtrl_link: std_logic_vector(3 downto 0);
-    signal ex_ShiftCtrl_link: std_logic_vector(1 downto 0);
-    signal ex_pc_link, ex_data_read1_link, ex_data_read2_link, ex_imm_link, ex_imm_shift2_link, ex_ALU_data2_link, ex_branch_addr_link, ex_ALU_result_link, ex_shift_result_link, ex_result_link: std_logic_vector(31 downto 0);
-    signal ex_rt_link, ex_rd_link, ex_addr_write_reg_link: std_logic_vector(4 downto 0);
+    signal ex_ShiftCtrl_link, FwdSrc1_link, FwdSrc2_link: std_logic_vector(1 downto 0);
+    signal ex_pc_link, ex_imm_link, ex_branch_addr_link, ex_data_read1_link, ex_data_read2_link, ex_imm_shift2_link, ex_ALUSrc_data_link, ex_ALU_data1_link, ex_ALU_data2_link, ex_shift_data_link, ex_ALU_result_link, ex_shift_result_link, ex_result_link: std_logic_vector(31 downto 0);
+    signal ex_rs_link, ex_rt_link, ex_rd_link, ex_addr_write_reg_link: std_logic_vector(4 downto 0);
 
-    -- SIGNALS IN MEMORY STAGE
+    -- SIGNALS OF MEMORY STAGE
     signal mem_Branch_link, mem_MemRead_link, mem_MemWrite_link, mem_MemToReg_link, mem_RegWrite_link, mem_branch_check_link, mem_PCSrc_link: std_logic;
     signal mem_branch_addr_link, mem_result_link, mem_data_write_mem_link, mem_data_read_mem_link: std_logic_vector(31 downto 0);
     signal mem_addr_write_reg_link: std_logic_vector(4 downto 0);
 
-    -- SIGNALS IN WRITE BACK STAGE
+    -- SIGNALS OF WRITE BACK STAGE
     signal wb_MemToReg_link, wb_RegWrite_link: std_logic; 
     signal wb_data_read_mem_link, wb_ALU_result_link, wb_data_write_reg_link: std_logic_vector(31 downto 0);
     signal wb_addr_write_reg_link: std_logic_vector(4 downto 0);
@@ -337,7 +378,7 @@ begin
                         N_DATA => 32 )
         port map (  addr_read1 => id_instr_link(25 downto 21),
                     addr_read2 => id_instr_link(20 downto 16),
-                    addr_write => wb_addr_write_reg_link, -- WARNING, WB FEEDBACK
+                    addr_write => wb_addr_write_reg_link, -- WB feedback 
                     data_read1 => id_data_read1_link,
                     data_read2 => id_data_read2_link,
                     data_write => wb_data_write_reg_link,
@@ -354,7 +395,7 @@ begin
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     --%%         INSTRUCTION EXECUTE         %%
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+    
     -- ID_EX REGISTER
     reg_id_ex_mips: reg_id_ex 
         port map(	id_ALUSrc => id_ALUSrc_link,
@@ -370,6 +411,7 @@ begin
                     id_data_read1 => id_data_read1_link,
                     id_data_read2 => id_data_read2_link,
                     id_imm => id_imm_link,
+                    id_rs => id_instr_link(25 downto 21),
                     id_rt => id_instr_link(20 downto 16),
                     id_rd => id_instr_link(15 downto 11),
                     ex_ALUSrc => ex_ALUSrc_link,
@@ -385,6 +427,7 @@ begin
                     ex_data_read1 => ex_data_read1_link,
                     ex_data_read2 => ex_data_read2_link,
                     ex_imm => ex_imm_link,
+                    ex_rs => ex_rs_link,
                     ex_rt => ex_rt_link,
                     ex_rd => ex_rd_link,
                     clk => clk,
@@ -403,27 +446,54 @@ begin
                     add2 => ex_imm_shift2_link,
                     sum => ex_branch_addr_link );
 
-    -- ALU 2nd operand
+    -- ALU rt/imm mux
     mux2_ex_ALUSrc_mips: mux2
         generic map ( N => 32 )
         port map (  port1 => ex_data_read2_link,
                     port2 => ex_imm_link, 
                     sel => ex_ALUSrc_link,          
-                    port_out => ex_ALU_data2_link );   
+                    port_out => ex_ALUSrc_data_link );   
+
+    -- ALU port1 - forwarding mux
+    mux3_ex_FwdSrc1_mips: mux3
+        generic map ( N => 32 )
+        port map (  port1 => ex_data_read1_link,
+                    port2 => wb_data_write_reg_link, -- feedback data 1 of forwarding unit
+                    port3 => mem_result_link,        -- feedback data 2 of forwarding unit
+                    sel => FwdSrc1_link,             -- control of forwarding unit
+                    port_out => ex_ALU_data1_link );  
+
+    -- ALU port2 - forwarding mux
+    mux3_ex_FwdSrc2_mips: mux3
+        generic map ( N => 32 )
+        port map (  port1 => ex_ALUSrc_data_link,
+                    port2 => wb_data_write_reg_link, -- feedback data 1 of forwarding unit
+                    port3 => mem_result_link,        -- feedback data 2 of forwarding unit
+                    sel => FwdSrc2_link,             -- control of forwarding unit          
+                    port_out => ex_ALU_data2_link );  
 
     -- ALU          
     alu_mips: alu 
         generic map ( N => 32 )
-        port map (  data1 => ex_data_read1_link,
+        port map (  data1 => ex_ALU_data1_link,
                     data2 => ex_ALU_data2_link,
                     ALUCtrl => ex_ALUCtrl_link,
                     result => ex_ALU_result_link,
-                    zero => ex_zero_link );   
+                    zero => ex_zero_link );
+
+    -- SHIFTER DATA - forwarding mux
+    mux3_ex_FwdSrc3_mips: mux3
+        generic map ( N => 32 )
+        port map (  port1 => ex_data_read2_link,
+                    port2 => wb_data_write_reg_link, -- feedback data 1 of forwarding unit
+                    port3 => mem_result_link,        -- feedback data 2 of forwarding unit
+                    sel => FwdSrc2_link,             -- control of forwarding unit          
+                    port_out => ex_shift_data_link );  
 
     -- SHIFTER
     shifter_mips: shifter
         port map (  shamt => ex_imm_link(10 downto 6),
-                    rt => ex_data_read2_link,
+                    rt => ex_shift_data_link,
                     ShiftCtrl => ex_ShiftCtrl_link,
                     result => ex_shift_result_link );
     
@@ -446,13 +516,25 @@ begin
                     sel => ex_ResSrc_link,          
                     port_out => ex_result_link );
 
-    -- DESTINATION CHOICE  
+    -- DESTINATION REGISTER mux  
     mux2_ex_RegDst_mips: mux2
         generic map ( N => 5 )
         port map (  port1 => ex_rt_link,
                     port2 => ex_rd_link, 
                     sel => ex_RegDst_link,          
                     port_out => ex_addr_write_reg_link );
+
+    -- FORWARDING UNIT
+    forwarding_unit_mips: forwarding_unit
+        port map (  rs => ex_rs_link,
+                    rt => ex_rt_link,
+                    RegDst => ex_RegDst_link,
+                    mem_rd => mem_addr_write_reg_link,
+                    mem_RegWrite => mem_RegWrite_link,
+                    wb_rd => wb_addr_write_reg_link,
+                    wb_RegWrite => wb_RegWrite_link,
+                    FwdSrc1 => FwdSrc1_link,
+                    FwdSrc2 => FwdSrc2_link );    
     
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     --%%            MEMORY ACCESS            %%

@@ -66,7 +66,7 @@ begin
             -- STORE
             when "001010" => 
                 ALUSrc <= '1';
-                RegDst <= '0'; -- DON'T CARE
+                RegDst <= '1'; -- DON'T CARE (see "instruction_set.xlsx")
                 ALUOp <= OPCode(3 downto 0);
                 BranchNE <= '0';
                 Branch <= '0';
@@ -78,7 +78,7 @@ begin
             -- BRANCH BEQ
             when "001011" =>
                 ALUSrc <= '0';
-                RegDst <= '0'; -- DON'T CARE
+                RegDst <= '1'; -- DON'T CARE (see "instruction_set.xlsx")
                 ALUOp <= OPCode(3 downto 0);
                 BranchNE <= '0';
                 Branch <= '1';
@@ -90,7 +90,7 @@ begin
             -- BRANCH BNE
             when "001100" => 
                 ALUSrc <= '0';
-                RegDst <= '0'; -- DON'T CARE
+                RegDst <= '1'; -- DON'T CARE (see "instruction_set.xlsx")
                 ALUOp <= OPCode(3 downto 0);
                 BranchNE <= '1'; -- WARNING (See EX Stage)
                 Branch <= '1';
