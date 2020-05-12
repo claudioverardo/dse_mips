@@ -7,7 +7,8 @@ entity pc is
 	port(	pc_next:    in	 std_logic_vector(31 downto 0);
 			pc:	        out  std_logic_vector(31 downto 0);
 			clk: 	    in	 std_logic;
-			rst:	    in   std_logic );
+			rst:	    in   std_logic;
+			wrt:	    in   std_logic );
 end pc;
 
 architecture behav of pc is
@@ -17,6 +18,7 @@ architecture behav of pc is
         port(	D:  	in	std_logic_vector(N-1 downto 0);
                 clk: 	in	std_logic;
                 rst:	in 	std_logic;
+                wrt:	in 	std_logic;
                 Q:		out	std_logic_vector(N-1 downto 0);
                 Qn:		out std_logic_vector(N-1 downto 0) );
     end component;
@@ -28,6 +30,7 @@ begin
         port map ( D => pc_next,
                    clk => clk,
                    rst => rst,
+                   wrt => wrt,
                    Q => pc );
 
 end behav;

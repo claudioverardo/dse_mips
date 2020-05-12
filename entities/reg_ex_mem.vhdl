@@ -30,7 +30,8 @@ entity reg_ex_mem is
             mem_addr_write_reg: out  std_logic_vector(4 downto 0);
             -- OTHERS
             clk:            in  std_logic;
-            rst:            in  std_logic  );
+            rst:            in  std_logic;
+            wrt:            in  std_logic  );
 end reg_ex_mem;
 
 architecture behav of reg_ex_mem is
@@ -39,6 +40,7 @@ architecture behav of reg_ex_mem is
         port(	D:  	in	std_logic;
                 clk: 	in	std_logic;
                 rst:	in 	std_logic;
+                wrt:    in  std_logic;
                 Q:		out	std_logic;
                 Qn:		out std_logic );
     end component;
@@ -48,6 +50,7 @@ architecture behav of reg_ex_mem is
         port(	D:  	in	std_logic_vector(N-1 downto 0);
                 clk: 	in	std_logic;
                 rst:	in 	std_logic;
+                wrt:    in  std_logic;
                 Q:		out	std_logic_vector(N-1 downto 0);
                 Qn:		out std_logic_vector(N-1 downto 0) );
     end component;
@@ -58,64 +61,74 @@ begin
         port map (  D => ex_Branch,
                     Q => mem_Branch,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     ff_MemRead: ff
         port map (  D => ex_MemRead,
                     Q => mem_MemRead,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     ff_MemWrite: ff
         port map (  D => ex_MemWrite,
                     Q => mem_MemWrite,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     ff_MemToReg: ff
         port map (  D => ex_MemToReg,
                     Q => mem_MemToReg,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     ff_RegWrite: ff
         port map (  D => ex_RegWrite,
                     Q => mem_RegWrite,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     reg_branch_addr: reg
         generic map ( N => 32 )
         port map (  D => ex_branch_addr,
                     Q => mem_branch_addr,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     ff_branch_check: ff
         port map (  D => ex_branch_check,
                     Q => mem_branch_check,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     reg_ALU_result: reg
         generic map ( N => 32 )
         port map (  D => ex_result,
                     Q => mem_result,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     reg_data_write_mem: reg
         generic map ( N => 32 )
         port map (  D => ex_data_write_mem,
                     Q => mem_data_write_mem,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     reg_addr_write_reg: reg
         generic map ( N => 5 )
         port map (  D => ex_addr_write_reg,
                     Q => mem_addr_write_reg,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
 end behav;

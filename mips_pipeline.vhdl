@@ -32,7 +32,8 @@ architecture behav of mips_pipeline is
         port(	pc_next:    in	std_logic_vector(31 downto 0);
                 pc:	        out std_logic_vector(31 downto 0);
                 clk: 	    in	std_logic;
-                rst:	    in  std_logic );
+                rst:	    in  std_logic;
+                wrt:	    in  std_logic );
     end component;
 
     -- IF_ID REGISTER
@@ -42,7 +43,8 @@ architecture behav of mips_pipeline is
                 id_pc:  	out	std_logic_vector(31 downto 0);
                 id_instr: 	out	std_logic_vector(31 downto 0);
                 clk:        in  std_logic;
-                rst:        in  std_logic );
+                rst:        in  std_logic;
+                wrt:	    in  std_logic );
     end component;
 
     -- ID_EX REGISTER
@@ -85,7 +87,8 @@ architecture behav of mips_pipeline is
                 ex_rd: 	        out	std_logic_vector(4 downto 0);
                 -- OTHERS
                 clk:            in  std_logic;
-                rst:            in  std_logic  );
+                rst:            in  std_logic;
+                wrt:	        in  std_logic  );
     end component; 
     
     -- EX_MEM REGISTER
@@ -116,7 +119,8 @@ architecture behav of mips_pipeline is
                 mem_addr_write_reg: out  std_logic_vector(4 downto 0);
                 -- OTHERS
                 clk:            in  std_logic;
-                rst:            in  std_logic  );
+                rst:            in  std_logic;
+                wrt:	        in  std_logic  );
     end component;
     
     -- MEM_WB REGISTER
@@ -137,7 +141,8 @@ architecture behav of mips_pipeline is
                 wb_addr_write_reg:   out std_logic_vector(4 downto 0);
                 -- OTHERS
                 clk:                 in  std_logic;
-                rst:                 in  std_logic  );
+                rst:                 in  std_logic;
+                wrt:	             in  std_logic  );
     end component;
     
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -281,6 +286,20 @@ architecture behav of mips_pipeline is
                 FwdSrc1:        out std_logic_vector(1 downto 0);
                 FwdSrc2:        out std_logic_vector(1 downto 0) ); 
     end component;
+
+    -- HAZARD DETECTION UNIT
+    component hazard_unit is
+        port(	-- HAZARD CHECK DATA
+                OPCode:         in  std_logic_vector(5 downto 0);
+                rs:             in  std_logic_vector(4 downto 0);
+                rt:             in  std_logic_vector(4 downto 0);
+                ex_MemRead:     in  std_logic;
+                ex_rt:          in  std_logic_vector(4 downto 0);
+                -- HAZARD CONTROL
+                Bubble:         out std_logic;
+                pc_wrt:         out std_logic;
+                if_id_wrt:      out std_logic ); 
+    end component;
     
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     --%%               SIGNALS               %%
@@ -291,7 +310,7 @@ architecture behav of mips_pipeline is
     
     -- SIGNALS OF DECODE STAGE
     signal id_OPCode_link: std_logic_vector(5 downto 0);
-    signal id_ALUSrc_link, id_RegDst_link, id_BranchNE_link, id_Branch_link, id_MemRead_link, id_MemWrite_link, id_MemToReg_link, id_RegWrite_link: std_logic;
+    signal id_Bubble_link, id_pc_wrt_link, id_if_id_wrt_link, id_ALUSrc_link, id_RegDst_link, id_BranchNE_link, id_Branch_link, id_MemRead_link, id_MemWrite_link, id_MemToReg_link, id_RegWrite_link: std_logic;
     signal id_ALUOp_link: std_logic_vector(3 downto 0);
     signal id_pc_link, id_instr_link, id_data_read1_link, id_data_read2_link, id_imm_link: std_logic_vector(31 downto 0);
 
@@ -323,7 +342,8 @@ begin
         port map (  pc_next => if_pc_next_link_mux,
                     pc => if_pc_link,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => id_pc_wrt_link ); -- feedback hazard unit
 
     -- INSTRUCTION MEMORY
     mem_instr_mips: mem_instr
@@ -342,7 +362,7 @@ begin
     mux2_if_mips: mux2
         generic map ( N => 32 )
         port map (  port1 => if_pc_next_link_adder,
-                    port2 => mem_branch_addr_link,  -- WARNING, branch feedback
+                    port2 => mem_branch_addr_link,  -- branch feedback
                     sel => mem_PCSrc_link, 
                     port_out => if_pc_next_link_mux );
     
@@ -357,11 +377,20 @@ begin
                     id_pc => id_pc_link,
                     id_instr => id_instr_link,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => id_if_id_wrt_link ); -- feedback hazard unit
+    
+    -- OPCode mux
+    mux2_id_OPCode_mips: mux2
+        generic map ( N => 6 )
+        port map (  port1 => id_instr_link(31 downto 26),
+                    port2 => "000000", 
+                    sel => id_Bubble_link,          
+                    port_out => id_OPCode_link );   
     
     -- CENTRAL CONTROL UNIT
     control_mips: control 
-        port map (  OPCode => id_instr_link(31 downto 26),
+        port map (  OPCode => id_OPCode_link,
                     ALUSrc => id_ALUSrc_link,
                     RegDst => id_RegDst_link,
                     ALUOp => id_ALUOp_link,
@@ -371,6 +400,17 @@ begin
                     MemWrite => id_MemWrite_link,
                     MemToReg => id_MemToReg_link,
                     RegWrite => id_RegWrite_link );
+
+    -- HAZARD DETECTION UNIT
+    hazard_unit_mips: hazard_unit
+        port map(	OPCode => id_instr_link(31 downto 26),
+                    rs => id_instr_link(25 downto 21),
+                    rt => id_instr_link(20 downto 16),
+                    ex_MemRead => ex_MemRead_link,  -- feedback ex 
+                    ex_rt => ex_rt_link,            -- feedback ex 
+                    Bubble => id_Bubble_link,
+                    pc_wrt => id_pc_wrt_link,
+                    if_id_wrt => id_if_id_wrt_link ); 
     
     -- REGISTER FILE
     reg_file_mips: reg_file
@@ -431,7 +471,8 @@ begin
                     ex_rt => ex_rt_link,
                     ex_rd => ex_rd_link,
                     clk => clk,
-                    rst => rst ); 
+                    rst => rst,
+                    wrt => '1' ); 
     
     -- SHIFT2
     shift2_mips: shift2 
@@ -550,7 +591,7 @@ begin
                     ex_branch_addr => ex_branch_addr_link,
                     ex_branch_check => ex_branch_check_link,
                     ex_result => ex_result_link,
-                    ex_data_write_mem => ex_data_read2_link,
+                    ex_data_write_mem => ex_ALU_data2_link,
                     ex_addr_write_reg => ex_addr_write_reg_link,
                     mem_Branch => mem_Branch_link,
                     mem_MemRead => mem_MemRead_link,
@@ -563,7 +604,8 @@ begin
                     mem_data_write_mem => mem_data_write_mem_link,
                     mem_addr_write_reg => mem_addr_write_reg_link,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => '1' );
 
     -- BRANCH PC UPDATE CONTROL
     mem_PCSrc_link <= mem_Branch_link and mem_branch_check_link;
@@ -594,7 +636,8 @@ begin
                     wb_result => wb_ALU_result_link,
                     wb_addr_write_reg => wb_addr_write_reg_link,
                     clk => clk,
-                    rst => rst  );
+                    rst => rst,
+                    wrt => '1'  );
 
     -- WB MULTIPLEXER
     mux2_wb_mips: mux2

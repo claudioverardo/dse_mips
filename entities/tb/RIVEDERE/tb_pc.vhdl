@@ -10,10 +10,11 @@ architecture behav of tb_pc is
         port(	pc_next:    in	std_logic_vector(31 downto 0);
                 pc:	        out	std_logic_vector(31 downto 0);
                 clk: 	    in	std_logic;
-                rst:	    in 	std_logic );
+                rst:	    in 	std_logic;
+                wrt:        in  std_logic );
     end component;
 	
-	signal clk_test, rst_test: std_logic;
+	signal clk_test, rst_test, wrt_test: std_logic;
 	signal in_test, out_test: std_logic_vector(31 downto 0);
 
 begin
@@ -22,7 +23,8 @@ begin
         port map ( pc_next => in_test,
                    pc => out_test,
                    clk => clk_test,
-                   rst => rst_test );
+                   rst => rst_test,
+                   wrt => wrt_test );
     
 
     clock_gen: process

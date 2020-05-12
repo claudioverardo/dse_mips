@@ -11,12 +11,13 @@ architecture behav of tb_reg is
 		port(	D:  	in	std_logic_vector(N-1 downto 0);
 				clk: 	in	std_logic;
 				rst:	in 	std_logic;
+				wrt:	in 	std_logic;
 				Q:		out	std_logic_vector(N-1 downto 0);
 				Qn:		out std_logic_vector(N-1 downto 0) );
 	end component;
 	
 	constant N_16  : natural := 16;
-	signal clk_16, rst_16: std_logic;
+	signal clk_16, rst_16, wrt_16: std_logic;
 	signal D_16, Q_16, Qn_16: std_logic_vector(N_16-1 downto 0);
 	
 begin
@@ -26,6 +27,7 @@ begin
 		port map ( 	D => D_16,
 					clk => clk_16,
 					rst => rst_16,
+					wrt => wrt_16,
 					Q => Q_16,
 					Qn => Qn_16 );
 					
@@ -49,6 +51,7 @@ begin
 	
 	data_gen: process
 	begin
+		wrt_16 <= '1';
 		D_16 <= x"FFFF";
 		wait for 35 ns;
 		D_16 <= x"AA00";
@@ -60,6 +63,9 @@ begin
 		D_16 <= x"FFEE";
 		wait for 5 ns;
 		D_16 <= x"1111";
+		wait for 20 ns;
+		wrt_16 <= '0';
+		D_16 <= x"5555";
 		wait;
 	end process;
 		

@@ -9,7 +9,8 @@ entity reg_if_id is
             id_pc:  	out	std_logic_vector(31 downto 0);
             id_instr: 	out	std_logic_vector(31 downto 0);
             clk:        in  std_logic;
-            rst:        in  std_logic );
+            rst:        in  std_logic;
+            wrt:        in  std_logic );
 end reg_if_id;
 
 architecture behav of reg_if_id is
@@ -19,6 +20,7 @@ architecture behav of reg_if_id is
         port(	D:  	in	std_logic_vector(N-1 downto 0);
                 clk: 	in	std_logic;
                 rst:	in 	std_logic;
+                wrt:    in  std_logic;
                 Q:		out	std_logic_vector(N-1 downto 0);
                 Qn:		out std_logic_vector(N-1 downto 0) );
     end component;
@@ -30,13 +32,15 @@ begin
         port map (  D => if_pc,
                     Q => id_pc,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
     reg_instr: reg
         generic map ( N => 32 )
         port map (  D => if_instr,
                     Q => id_instr,
                     clk => clk,
-                    rst => rst );
+                    rst => rst,
+                    wrt => wrt );
 
 end behav;
