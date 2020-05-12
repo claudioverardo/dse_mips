@@ -5,6 +5,7 @@ use ieee.std_logic_1164.all;
 
 entity reg_mem_wb is
     port (  -- CONTROL IN
+            mem_Branch:          in std_logic;
             mem_MemToReg:        in  std_logic;
             mem_RegWrite:        in  std_logic;
             -- DATA IN 
@@ -12,6 +13,7 @@ entity reg_mem_wb is
             mem_result:          in  std_logic_vector(31 downto 0);
             mem_addr_write_reg:  in  std_logic_vector(4 downto 0);
             -- CONTROL OUT
+            wb_Branch:           out std_logic;
             wb_MemToReg:         out std_logic;
             wb_RegWrite:         out std_logic;
             -- DATA OUT
@@ -46,6 +48,13 @@ architecture behav of reg_mem_wb is
     end component;
 
 begin
+
+    ff_Branch: ff
+    port map (  D => mem_Branch,
+                Q => wb_Branch,
+                clk => clk,
+                rst => rst,
+                wrt => wrt );
 
     ff_MemToReg: ff
         port map (  D => mem_MemToReg,

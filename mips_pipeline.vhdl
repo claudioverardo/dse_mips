@@ -126,23 +126,25 @@ architecture behav of mips_pipeline is
     -- MEM_WB REGISTER
     component reg_mem_wb
         port (  -- CONTROL IN
+                mem_Branch:          in std_logic;
                 mem_MemToReg:        in  std_logic;
                 mem_RegWrite:        in  std_logic;
                 -- DATA IN 
                 mem_data_read_mem:   in  std_logic_vector(31 downto 0);
-                mem_result:      in  std_logic_vector(31 downto 0);
+                mem_result:          in  std_logic_vector(31 downto 0);
                 mem_addr_write_reg:  in  std_logic_vector(4 downto 0);
                 -- CONTROL OUT
+                wb_Branch:           out std_logic;
                 wb_MemToReg:         out std_logic;
                 wb_RegWrite:         out std_logic;
                 -- DATA OUT
                 wb_data_read_mem:    out std_logic_vector(31 downto 0);
-                wb_result:       out std_logic_vector(31 downto 0);
+                wb_result:           out std_logic_vector(31 downto 0);
                 wb_addr_write_reg:   out std_logic_vector(4 downto 0);
                 -- OTHERS
                 clk:                 in  std_logic;
                 rst:                 in  std_logic;
-                wrt:	             in  std_logic  );
+                wrt:                 in  std_logic  );
     end component;
     
     --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -295,6 +297,9 @@ architecture behav of mips_pipeline is
                 rt:             in  std_logic_vector(4 downto 0);
                 ex_MemRead:     in  std_logic;
                 ex_rt:          in  std_logic_vector(4 downto 0);
+                ex_Branch:      in  std_logic;
+                mem_Branch:     in  std_logic;
+                wb_Branch:      in  std_logic;
                 -- HAZARD CONTROL
                 Bubble:         out std_logic;
                 pc_wrt:         out std_logic;
@@ -327,7 +332,7 @@ architecture behav of mips_pipeline is
     signal mem_addr_write_reg_link: std_logic_vector(4 downto 0);
 
     -- SIGNALS OF WRITE BACK STAGE
-    signal wb_MemToReg_link, wb_RegWrite_link: std_logic; 
+    signal wb_Branch_link, wb_MemToReg_link, wb_RegWrite_link: std_logic; 
     signal wb_data_read_mem_link, wb_ALU_result_link, wb_data_write_reg_link: std_logic_vector(31 downto 0);
     signal wb_addr_write_reg_link: std_logic_vector(4 downto 0);
 
@@ -406,8 +411,11 @@ begin
         port map(	OPCode => id_instr_link(31 downto 26),
                     rs => id_instr_link(25 downto 21),
                     rt => id_instr_link(20 downto 16),
-                    ex_MemRead => ex_MemRead_link,  -- feedback ex 
-                    ex_rt => ex_rt_link,            -- feedback ex 
+                    ex_MemRead => ex_MemRead_link,  -- feedback LOAD 
+                    ex_rt => ex_rt_link,            -- feedback LOAD
+                    ex_Branch => ex_Branch_link,    -- feedback BRANCH
+                    mem_Branch => mem_Branch_link,  -- feedback BRANCH
+                    wb_Branch => wb_Branch_link,    -- feedback BRANCH
                     Bubble => id_Bubble_link,
                     pc_wrt => id_pc_wrt_link,
                     if_id_wrt => id_if_id_wrt_link ); 
@@ -625,11 +633,13 @@ begin
 
     -- MEM_WB REGISTER
     reg_mem_wb_mips: reg_mem_wb
-        port map (  mem_MemToReg => mem_MemToReg_link,
+        port map (  mem_Branch => mem_Branch_link,
+                    mem_MemToReg => mem_MemToReg_link,
                     mem_RegWrite => mem_RegWrite_link,
                     mem_data_read_mem => mem_data_read_mem_link,
                     mem_result => mem_result_link,
                     mem_addr_write_reg => mem_addr_write_reg_link,
+                    wb_Branch => wb_Branch_link,
                     wb_MemToReg => wb_MemToReg_link,
                     wb_RegWrite => wb_RegWrite_link,
                     wb_data_read_mem => wb_data_read_mem_link,

@@ -10,6 +10,9 @@ entity hazard_unit is
             rt:             in  std_logic_vector(4 downto 0);
             ex_MemRead:     in  std_logic;
             ex_rt:          in  std_logic_vector(4 downto 0);
+            ex_Branch:      in  std_logic;
+            mem_Branch:     in  std_logic;
+            wb_Branch:      in  std_logic;
             -- HAZARD CONTROL
             Bubble:         out std_logic;
             pc_wrt:         out std_logic;
@@ -20,8 +23,10 @@ architecture behav of hazard_unit is
 
 begin
     
-    process (OPCode, rs, rt, ex_MemRead, ex_rt)
+    process (OPCode, rs, rt, ex_MemRead, ex_rt, ex_Branch, mem_Branch, wb_Branch)
     begin
+
+        -- DATA HAZARDS
 
         if (ex_MemRead = '1') then
     
@@ -67,6 +72,23 @@ begin
             pc_wrt <= '1';
             if_id_wrt <= '1';
 
+        end if;
+        
+
+        -- CONTROL HAZARDS
+
+        if (ex_Branch = '1') then
+            Bubble <= '1';
+            pc_wrt <= '0';
+            if_id_wrt <= '0';
+        elsif (mem_Branch = '1') then
+            Bubble <= '1';
+            pc_wrt <= '1';
+            if_id_wrt <= '0';
+        elsif (wb_Branch = '1') then
+            Bubble <= '1';
+            pc_wrt <= '1';
+            if_id_wrt <= '1';
         end if;
    
     end process;
