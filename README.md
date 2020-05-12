@@ -4,7 +4,7 @@ VHDL implementation of a MIPS-like architecture.
 
 ### Overview
 
-* Schematic: "mips_pipeline.png"
+* Schematic: [a relative link](mips_pipeline.png)
 * Instruction Set: "instruction_set.xlsx"
 * Main file: "src/mips_pipeline.vhdl"
 
