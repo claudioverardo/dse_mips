@@ -34,8 +34,8 @@ architecture behav of mem_data is
     
 begin
 
-    -- per facilitare la lettura, gli indirizzi 0, 4, 8 ecc puntano al byte più significativo del dato
-    -- si occupa poi il programma di leggere/scrivere in memoria i byte nel modo corretto
+    -- NOTE: to simplify the data read, the array addresses 0, 4, 8, etc point to the MSBs of the actual data
+    -- the program handles by itself the R/W of data in memory in the proper way
     process(addr, MemWrite, MemRead)
     begin
         if (MemRead = '1' and MemWrite = '0') then 
