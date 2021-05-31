@@ -1,8 +1,8 @@
-# Pipelined MIPS CPU architecture
+# VHDL implementation of a MIPS pipeline processor
 
 ![MIPSOverview](./docs/mips_overview.png)
 
-This project provides a VHDL implementation of a CPU based on the MIPS architecture. The ISA comprises 21 operations to manage arithmetic/logical expressions, memory access and conditional branches. The instructions are executed via a five-stage RISC pipeline. Data and control hazards are properly handled through a forwarding unit and a hazard detection unit. The project was developed during the MSc course "Digital Systems Electronics" at the University of Udine during the academic year 2019/2020.
+This project provides a VHDL implementation of a 32‑bit CPU based on the MIPS architecture. The ISA comprises 21 operations to manage arithmetic and logical expressions, memory access and conditional branches. The instructions are executed via a five-stage RISC pipeline. Data and control hazards are properly handled through a forwarding unit and a hazard detection unit. The project was developed during the MSc course "Digital Systems Electronics" at the University of Udine during the academic year 2019/2020.
 
 Main file: [src/mips_pipeline.vhdl](src/mips_pipeline.vhdl)
 
